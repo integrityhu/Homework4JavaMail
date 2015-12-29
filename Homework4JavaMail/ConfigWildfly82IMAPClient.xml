@@ -1,0 +1,59 @@
+<!-- 
+wildfly 8.2.0
+standalone.xml
+-->
+        <subsystem xmlns="urn:jboss:domain:mail:2.0">
+            <mail-session name="default" jndi-name="java:jboss/mail/Default">
+                <smtp-server outbound-socket-binding-ref="mail-host-smtp" username="name@host.hu" password="passwd"/>
+            </mail-session>
+            <mail-session name="myimaps" debug="true" jndi-name="java:/jboss/mail/MyIMAPs">
+                <imap-server outbound-socket-binding-ref="mail-host-imaps" ssl="true" username="name@host.hu" password="passwd"/>
+            </mail-session>
+        </subsystem>
+
+    <socket-binding-group name="standard-sockets" default-interface="public" port-offset="${jboss.socket.binding.port-offset:0}">
+        <outbound-socket-binding name="mail-host-smtp">
+            <remote-destination host="smtp.host.hu" port="25"/>
+        </outbound-socket-binding>
+        <outbound-socket-binding name="mail-host-imaps">
+            <remote-destination host="mail.host.hu" port="993"/>
+        </outbound-socket-binding>
+    </socket-binding-group>
+
+<!-- pom.xml -->
+
+		<dependency>
+			<groupId>javax.mail</groupId>
+			<artifactId>mail</artifactId>
+			<version>1.4</version>
+		</dependency>
+
+    
+<!-- Java IMAPs client schedule -->
+    
+import javax.annotation.Resource;
+import javax.ejb.Schedule;
+import javax.ejb.Startup;
+import javax.ejb.Stateless;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+
+import com.sun.mail.imap.IMAPStore;
+
+@Startup
+@Stateless
+public class IMAPClient {
+
+	@Resource(mappedName = "java:jboss/mail/MyIMAPs")
+	private Session mailSession;
+	
+	@Schedule(hour = "*", minute = "*")
+    public void init() {
+        try {
+            IMAPStore store = (IMAPStore) mailSession.getStore();
+            if (!store.isConnected()) store.connect();
+                
+        } catch (MessagingException ex) { /* handle exception */ }
+    }
+}
+    
